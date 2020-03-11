@@ -145,7 +145,9 @@ export class QuickInputEditorContribution implements IEditorContribution {
 
 	readonly widget = new QuickInputEditorWidget(this.editor);
 
-	constructor(private editor: ICodeEditor) { }
+	constructor(private editor: ICodeEditor, @IQuickInputService quickInputService: IQuickInputService) {
+		once(editor.onDidFocusEditorText)(() => quickInputService.quickAccess.show(''));
+	}
 
 	dispose(): void {
 		this.widget.dispose();
