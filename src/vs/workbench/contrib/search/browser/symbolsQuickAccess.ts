@@ -20,6 +20,8 @@ import { Range } from 'vs/editor/common/core/range';
 import { IConfigurationService } from 'vs/platform/configuration/common/configuration';
 import { IWorkbenchEditorConfiguration } from 'vs/workbench/common/editor';
 import { IKeyMods, IQuickPick } from 'vs/platform/quickinput/common/quickInput';
+import { IInstantiationService } from 'vs/platform/instantiation/common/instantiation';
+import { createResourceExcludeMatcher } from 'vs/workbench/services/search/common/search';
 
 interface ISymbolsQuickPickItem extends IPickerQuickAccessItem {
 	score: FuzzyScore;
@@ -34,11 +36,14 @@ export class SymbolsQuickAccessProvider extends PickerQuickAccessProvider<ISymbo
 
 	private delayer = new ThrottledDelayer<ISymbolsQuickPickItem[]>(SymbolsQuickAccessProvider.TYPING_SEARCH_DELAY);
 
+	private readonly resourceExcludeMatcher = this._register(createResourceExcludeMatcher(this.instantiationService, this.configurationService));
+
 	constructor(
 		@ILabelService private readonly labelService: ILabelService,
 		@IOpenerService private readonly openerService: IOpenerService,
 		@IEditorService private readonly editorService: IEditorService,
-		@IConfigurationService private readonly configurationService: IConfigurationService
+		@IConfigurationService private readonly configurationService: IConfigurationService,
+		@IInstantiationService private readonly instantiationService: IInstantiationService
 	) {
 		super(SymbolsQuickAccessProvider.PREFIX);
 	}
@@ -114,6 +119,11 @@ export class SymbolsQuickAccessProvider extends PickerQuickAccessProvider<ISymbo
 					if (!containerScore) {
 						continue;
 					}
+				}
+
+				// Filter out symbols that match the global resource filter
+				if (symbol.location.uri && this.resourceExcludeMatcher.matches(symbol.location.uri)) {
+					continue;
 				}
 
 				const deprecated = symbol.tags ? symbol.tags.indexOf(SymbolTag.Deprecated) >= 0 : false;
